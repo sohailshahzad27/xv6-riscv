@@ -231,7 +231,7 @@ userinit(void)
   release(&p->lock);
 }
 
-// Shrink user memory by n bytes.
+// Grow or shrink user memory by n bytes.
 // Return 0 on success, -1 on failure.
 int
 growproc(int n)
