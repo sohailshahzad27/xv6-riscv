@@ -82,11 +82,11 @@ memdump(char *fmt, char *data, int len)
     } else if (format == 'c') {
       required = 1;
     } else {
-      printf("memdump: not enough data for '%c'\n", format);
+      printf("memdump: unsupported format '%c'\n", format);
       return;
     }
     if (len < required) {
-      printf("memdump: unsupported format '%c'\n", format);
+      printf("memdump: not enough data for '%c'\n", format);
       return;
     }
     if (format == 'i') {
@@ -96,7 +96,7 @@ memdump(char *fmt, char *data, int len)
     } else if (format == 'p') {
       uint64 value;
       memmove(&value, data, required);
-      printf("%lx \n", value);
+      printf("%lx\n", value);
     } else if (format == 'h') {
       short value;
       memmove(&value, data, required);
