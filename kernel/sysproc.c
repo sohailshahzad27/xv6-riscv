@@ -110,3 +110,22 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_interpose(void)
+{
+  struct proc *p = myproc();
+  int mask;
+  char path[MAXPATH];
+
+  // A confined process cannot remove or change its restrictions.
+  if (p->sandbox_mask != 0)
+    return -1;
+  argint(0, &mask);
+  if (argstr(1, path, sizeof(path)) < 0)
+    return -1;
+
+  p->sandbox_mask = (uint)mask;
+  safestrcpy(p->sandbox_path, path, sizeof(p->sandbox_path));
+  return 0;
+}

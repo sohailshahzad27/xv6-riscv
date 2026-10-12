@@ -282,6 +282,7 @@ ifeq ($(LAB),util)
 	UPROGS += $U/_memdump $U/_sleep $U/_sixfive $U/_find
 endif
 ifeq ($(LAB),syscall)
+	UPROGS += $U/_sandbox $U/_sbtest $U/_secret $U/_attack
 	UEXTRA += user/exec.sh
 endif
 
@@ -366,7 +367,7 @@ grade:
 	@echo $(MAKE) clean
 	@$(MAKE) clean || \
           (echo "'make clean' failed.  HINT: Do you have another running instance of xv6?" && exit 1)
-	./grade-lab-$(LAB) $(GRADEFLAGS)
+	python3 grade-lab-$(LAB) $(GRADEFLAGS)
 
 ##
 ## FOR submissions
