@@ -175,7 +175,7 @@ $U/usys.o : $U/usys.S
 $U/_forktest: $U/forktest.o $(ULIB)
 	# forktest has less library code linked in - needs to be small
 	# in order to be able to max out the proc table.
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
+	$(LD) $(LDFLAGS) -e main -T $U/user.ld -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
 
 mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
@@ -254,7 +254,8 @@ endif
 
 ifeq ($(LAB),pgtbl)
 UPROGS += \
-	$U/_pgtbltest
+	$U/_pgtbltest\
+	$U/_pgtblcheck
 endif
 
 ifeq ($(LAB),lock)

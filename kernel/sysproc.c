@@ -110,7 +110,52 @@ sys_vmprint(void)
 int
 sys_pgaccess(void)
 {
-  // lab pgtbl: your code here.
+  enum { MAX_PAGES = 4096 };
+  unsigned char bits[MAX_PAGES / 8];
+  uint64 start, dst;
+  int npages;
+  struct proc *p = myproc();
+
+  argaddr(0, &start);
+  argint(1, &npages);
+  argaddr(2, &dst);
+  if (npages <= 0 || npages > MAX_PAGES || start >= MAXVA)
+    return -1;
+  start = PGROUNDDOWN(start);
+  if ((uint64)npages * PGSIZE > MAXVA - start)
+    return -1;
+
+  int nbytes = (npages + 7) / 8;
+  if (dst >= MAXVA || (uint64)nbytes > MAXVA - dst)
+    return -1;
+
+  // Validate the entire destination before copying, including page crossings.
+  // pgaccess must not allocate missing pages or write to read-only mappings.
+  for (uint64 va = PGROUNDDOWN(dst); va < dst + nbytes; va += PGSIZE) {
+    pte_t *pte = walk(p->pagetable, va, 0);
+    if (pte == 0 || (*pte & (PTE_V | PTE_U | PTE_W)) !=
+                        (PTE_V | PTE_U | PTE_W))
+      return -1;
+  }
+
+  memset(bits, 0, sizeof(bits));
+  for (int i = 0; i < npages; i++) {
+    pte_t *pte = walk(p->pagetable, start + (uint64)i * PGSIZE, 0);
+    if (pte == 0 || (*pte & (PTE_V | PTE_U)) != (PTE_V | PTE_U) ||
+        !PTE_LEAF(*pte))
+      return -1;
+    if (*pte & PTE_A)
+      bits[i / 8] |= 1U << (i % 8);
+  }
+
+  if (copyout(p->pagetable, p->sz, dst, (char *)bits, nbytes) < 0)
+    return -1;
+
+  // Clear only after all validation and copying succeed, so an error does
+  // not consume access information. Invalidate cached translations too.
+  for (int i = 0; i < npages; i++)
+    *walk(p->pagetable, start + (uint64)i * PGSIZE, 0) &= ~PTE_A;
+  sfence_vma();
   return 0;
 }
 #endif

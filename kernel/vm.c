@@ -148,13 +148,87 @@ walkaddr(pagetable_t pagetable, uint64 va)
 
 
 #if defined(LAB_PGTBL) || defined(SOL_MMAP) || defined(SOL_COW)
+static void
+vmprint_level(pagetable_t pagetable, int level, uint64 base)
+{
+  for (int i = 0; i < 512; i++) {
+    pte_t pte = pagetable[i];
+    if ((pte & PTE_V) == 0)
+      continue;
+
+    uint64 va = base | ((uint64)i << PXSHIFT(level));
+    uint64 pa = PTE2PA(pte);
+    for (int depth = 2; depth >= level; depth--)
+      printk(" ..");
+    printk("%p: pte %p pa %p", (void *)va, (void *)pte, (void *)pa);
+    if (pte & (PTE_R | PTE_W | PTE_X)) {
+      printk(" %s%s%s%s%s", (pte & PTE_R) ? "R" : "",
+             (pte & PTE_W) ? "W" : "", (pte & PTE_X) ? "X" : "",
+             (pte & PTE_U) ? "U" : "", level > 0 ? " superpage" : "");
+    }
+    printk("\n");
+
+    // Leaf PTEs contain data/code, never another page-table page.
+    if (level > 0 && (pte & (PTE_R | PTE_W | PTE_X)) == 0)
+      vmprint_level((pagetable_t)pa, level - 1, va);
+  }
+}
+
 void
 vmprint(pagetable_t pagetable)
 {
-  // your code here
+  printk("page table %p\n", pagetable);
+  vmprint_level(pagetable, 2, 0);
 }
 #endif
 
+
+#ifdef LAB_PGTBL
+// Kernel-only mapper: use aligned 2 MiB leaves whenever the mapping permits.
+// User mappings continue to use mappages() and ordinary 4 KiB pages.
+static int
+kvmmap_pages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa,
+             int perm)
+{
+  if (size == 0 || va % PGSIZE || pa % PGSIZE || size % PGSIZE)
+    panic("kvmmap: alignment");
+
+  while (size > 0) {
+    uint64 step = PGSIZE;
+    int leaflevel = 0;
+    if (va % SUPERPGSIZE == 0 && pa % SUPERPGSIZE == 0 &&
+        size >= SUPERPGSIZE) {
+      step = SUPERPGSIZE;
+      leaflevel = 1;
+    }
+
+    pagetable_t table = pagetable;
+    for (int level = 2; level > leaflevel; level--) {
+      pte_t *pte = &table[PX(level, va)];
+      if (*pte & PTE_V) {
+        if (PTE_LEAF(*pte))
+          panic("kvmmap: remap leaf");
+        table = (pagetable_t)PTE2PA(*pte);
+      } else {
+        table = (pagetable_t)kalloc();
+        if (table == 0)
+          return -1;
+        memset(table, 0, PGSIZE);
+        *pte = PA2PTE(table) | PTE_V;
+      }
+    }
+
+    pte_t *pte = &table[PX(leaflevel, va)];
+    if (*pte & PTE_V)
+      panic("kvmmap: remap");
+    *pte = PA2PTE(pa) | perm | PTE_V;
+    va += step;
+    pa += step;
+    size -= step;
+  }
+  return 0;
+}
+#endif
 
 // add a mapping to the kernel page table.
 // only used when booting.
@@ -162,7 +236,11 @@ vmprint(pagetable_t pagetable)
 void
 kvmmap(pagetable_t kpgtbl, uint64 va, uint64 pa, uint64 sz, int perm)
 {
+#ifdef LAB_PGTBL
+  if (kvmmap_pages(kpgtbl, va, sz, pa, perm) != 0)
+#else
   if (mappages(kpgtbl, va, sz, pa, perm) != 0)
+#endif
     panic("kvmmap");
 }
 

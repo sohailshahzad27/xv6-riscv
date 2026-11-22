@@ -1,0 +1,111 @@
+Page tables lab answers
+======================
+
+1. Inspect a user-process page table
+
+These are the twenty virtual pages printed by the unmodified pgtbltest
+on this build. Physical frames can change between runs; physical frames
+need not be contiguous even when virtual pages are adjacent.
+
+Virtual address    Flags  Logical contents and allowed accesses
+0x0000000000       0x5b   Program text/read-only constants: V,R,X,U,A.
+                         User code can read and execute, but cannot write.
+0x0000001000       0x1b   Remainder of text/read-only constants: V,R,X,U.
+                         Same permissions; A is not set at this snapshot.
+0x0000002000       0x17   Writable program data/BSS: V,R,W,U, not executable.
+0x0000003000       0x07   Stack guard: V,R,W, with U cleared. User access
+                         faults even though a physical frame is allocated.
+0x0000004000       0xd7   User stack: V,R,W,U,A,D. Read/write, no execute;
+                         the hardware has observed accesses and writes.
+0x0000005000       0x00   Unmapped: no valid PTE or allocated user frame.
+0x0000006000       0x00   Unmapped.
+0x0000007000       0x00   Unmapped.
+0x0000008000       0x00   Unmapped.
+0x0000009000       0x00   Unmapped.
+0x3fffff6000       0x00   Unmapped gap below the special high mappings.
+0x3fffff7000       0x00   Unmapped.
+0x3fffff8000       0x00   Unmapped.
+0x3fffff9000       0x00   Unmapped.
+0x3fffffa000       0x00   Unmapped.
+0x3fffffb000       0x00   Unmapped.
+0x3fffffc000       0x00   Unmapped.
+0x3fffffd000       0x13   USYSCALL: V,R,U. Contains this process's PID.
+                         User reads are allowed; writes/execute are denied.
+0x3fffffe000       0xc7   TRAPFRAME: V,R,W,A,D. Saved registers and kernel
+                         transition information. Supervisor only, no execute.
+0x3ffffff000       0x4b   TRAMPOLINE: V,R,X,A. Shared trap entry/exit code.
+                         Supervisor only; read/execute allowed, writes denied.
+
+V=bit 0, R=bit 1, W=bit 2, X=bit 3, U=bit 4, A=bit 6, D=bit 7.
+A and D are hardware-maintained status bits, not additional permissions.
+Neither status bit is needed for an unmapped PTE. Text/data addresses and
+status bits can vary with compiler, executable layout, and accesses.
+
+2. Walking and printing the page table
+
+Sv39 actually has three page-table levels, numbered 2, 1, and 0. The lab
+heading's "two-level" description does not change the hardware layout.
+Each level has 512 eight-byte entries. Each successive level contributes
+nine virtual-address bits; the final twelve bits are the page offset.
+
+vmprint prints only valid PTEs. Indentation shows depth. An entry with
+V set and R/W/X all clear points to the next page-table page. Its printed
+virtual address is the base of that subtree, not another user data page.
+It has no leaf permissions. A valid entry with R, W, or X is a leaf.
+
+The eight ordinary leaf mappings printed by vmprint are the five low
+pages (two RXU code pages, RWU data, RW guard, and RWU stack), plus RU
+USYSCALL, RW trapframe, and RX trampoline. These are exactly the eight
+nonzero entries above. Their PTE values and physical-frame addresses
+match print_pgtbl; vmprint also shows the intermediate page-table pages.
+The twelve invalid entries above are omitted from the tree output.
+User-accessible mappings need U. The guard, trapframe, and trampoline
+lack U, so users cannot access them even if R/W/X is present.
+
+The printer stops at leaf entries at any level. A leaf above level zero
+is labelled "superpage" and is never interpreted as another table.
+
+3. Detecting accessed pages
+
+pgaccess accepts 1 through 4096 pages and rounds the supplied starting
+address down to its containing page. Its byte-packed output has
+ceil(npages/8) bytes, with bit i describing page i and unused high bits
+zero. It supports the original 32-page and 256-page tests.
+
+The kernel checks ranges, every input mapping, and every output mapping
+(including output page crossings). Input pages must be valid user leaves;
+the output must be mapped, user-accessible, and writable. It returns -1
+without allocating pages, partially writing the output, or clearing A
+bits on error. After a successful copy, it clears the observed A bits
+and executes sfence.vma so later accesses can be detected again.
+
+4. Other operations that could use a shared read-only page
+
+uptime() could read a kernel-maintained tick count from a shared mapping
+instead of entering the kernel. The kernel would update the count on
+clock interrupts. A single aligned counter can be read atomically; a
+multi-field snapshot would require a sequence counter or similar scheme.
+
+The query sbrk(0) could also read a cached current process size if all
+size-changing paths, including eager/lazy sbrk and exec, maintained it.
+Changing the size would still require a system call. This lab implements
+only the requested PID optimization, not these possible extensions.
+
+5. Kernel superpages and memory saved
+
+pgtblcheck measured 95 two-megabyte leaf PTEs and 579 four-kilobyte leaf
+PTEs in the kernel page table with the default 128 MiB RAM and NPROC=64.
+
+32 superpages map the 64 MiB PLIC region. Another 63 cover the 126 MiB
+of RAM from 0x80200000 to 0x88000000. The first 2 MiB of RAM stays mapped
+with ordinary pages because executable kernel text and writable data
+need different permissions. UART, virtio, the trampoline, and per-process
+kernel stacks also retain ordinary pages. No mapping is expanded past
+the caller's requested range and user mappings remain four-kilobyte pages.
+
+Each superpage replaces 512 level-zero leaf entries and eliminates one
+level-zero page-table page: 95 pages, or 95 * 4096 = 389120 bytes (380 KiB)
+of page-table memory saved. The 95 leaves cover 48640 ordinary pages.
+
+Reproduce with make qemu, then run pgtbltest and pgtblcheck. Source:
+https://pdos.csail.mit.edu/6.828/2026/labs/pgtbl.html

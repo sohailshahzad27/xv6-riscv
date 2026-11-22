@@ -1,0 +1,19 @@
+== Test pgtbltest ==
+$ make qemu-gdb
+(4.4s)
+== Test   pgtbltest: vmprint_test ==
+  pgtbltest: vmprint_test: OK
+== Test   pgtbltest: pgaccess ==
+  pgtbltest: pgaccess: OK
+== Test   pgtbltest: ugetpid ==
+  pgtbltest: ugetpid: OK
+== Test   pgtbltest: superpg ==
+  pgtbltest: superpg: OK
+== Test answers-pgtbl.txt ==
+answers-pgtbl.txt: OK
+== Test usertests ==
+$ make qemu-gdb
+(79.6s)
+== Test time ==
+time: OK
+Score: 46/46

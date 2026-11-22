@@ -1,0 +1,7 @@
+Clean make grade build on 2026-11-15 in Ubuntu WSL.
+GCC: riscv64-linux-gnu-gcc 15.2.0
+QEMU: qemu-system-riscv64 10.2.1
+CPUS=3; RAM=128 MiB
+Compiler flags include -Wall -Werror.
+Full build log checked: no warning: or error: diagnostics.
+Original MIT grader and lab test source verified unchanged.

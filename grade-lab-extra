@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+from pathlib import Path
+from gradelib import Runner, save, shell_script, test, run_tests
+
+Path("validation").mkdir(exist_ok=True)
+r = Runner(save("validation/extra-checks.txt"))
+
+
+@test(1, "page-table error handling and fork regression")
+def extra_checks():
+    r.run_qemu(shell_script(["pgtbltest", "pgtblcheck", "forktest"]), timeout=90)
+    r.match("^pgtbltest: all tests succeeded$",
+            "^pgtblcheck: all checks passed$", "^fork test OK$")
+
+
+run_tests()

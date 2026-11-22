@@ -1,0 +1,59 @@
+
+xv6 kernel is booting
+
+hart 2 starting
+hart 1 starting
+init: starting sh
+$ pgtbltest
+print_pgtbl starting
+va 0x0 pte 0x21FDF85B pa 0x87F7E000 perm 0x5B
+va 0x1000 pte 0x21FDEC1B pa 0x87F7B000 perm 0x1B
+va 0x2000 pte 0x21FDE817 pa 0x87F7A000 perm 0x17
+va 0x3000 pte 0x21FDE407 pa 0x87F79000 perm 0x7
+va 0x4000 pte 0x21FDE0D7 pa 0x87F78000 perm 0xD7
+va 0x5000 pte 0x0 pa 0x0 perm 0x0
+va 0x6000 pte 0x0 pa 0x0 perm 0x0
+va 0x7000 pte 0x0 pa 0x0 perm 0x0
+va 0x8000 pte 0x0 pa 0x0 perm 0x0
+va 0x9000 pte 0x0 pa 0x0 perm 0x0
+va 0x3FFFFF6000 pte 0x0 pa 0x0 perm 0x0
+va 0x3FFFFF7000 pte 0x0 pa 0x0 perm 0x0
+va 0x3FFFFF8000 pte 0x0 pa 0x0 perm 0x0
+va 0x3FFFFF9000 pte 0x0 pa 0x0 perm 0x0
+va 0x3FFFFFA000 pte 0x0 pa 0x0 perm 0x0
+va 0x3FFFFFB000 pte 0x0 pa 0x0 perm 0x0
+va 0x3FFFFFC000 pte 0x0 pa 0x0 perm 0x0
+va 0x3FFFFFD000 pte 0x21FEC413 pa 0x87FB1000 perm 0x13
+va 0x3FFFFFE000 pte 0x21FE7CC7 pa 0x87F9F000 perm 0xC7
+va 0x3FFFFFF000 pte 0x20001C4B pa 0x80007000 perm 0x4B
+print_pgtbl: OK
+vmprint_test starting
+page table 0x0000000087f81000
+ ..0x0000000000000000: pte 0x0000000021fdf401 pa 0x0000000087f7d000
+ .. ..0x0000000000000000: pte 0x0000000021fdf001 pa 0x0000000087f7c000
+ .. .. ..0x0000000000000000: pte 0x0000000021fdf85b pa 0x0000000087f7e000 RXU
+ .. .. ..0x0000000000001000: pte 0x0000000021fdec1b pa 0x0000000087f7b000 RXU
+ .. .. ..0x0000000000002000: pte 0x0000000021fde817 pa 0x0000000087f7a000 RWU
+ .. .. ..0x0000000000003000: pte 0x0000000021fde407 pa 0x0000000087f79000 RW
+ .. .. ..0x0000000000004000: pte 0x0000000021fde0d7 pa 0x0000000087f78000 RWU
+ ..0x0000003fc0000000: pte 0x0000000021fe0001 pa 0x0000000087f80000
+ .. ..0x0000003fffe00000: pte 0x0000000021fdfc01 pa 0x0000000087f7f000
+ .. .. ..0x0000003fffffd000: pte 0x0000000021fec413 pa 0x0000000087fb1000 RU
+ .. .. ..0x0000003fffffe000: pte 0x0000000021fe7cc7 pa 0x0000000087f9f000 RW
+ .. .. ..0x0000003ffffff000: pte 0x0000000020001c4b pa 0x0000000080007000 RX
+vmprint_test: done
+pgaccess_test starting
+pgaccess_test: OK
+ugetpid_test starting
+ugetpid_test: OK
+ksuper_test: OK
+pgtbltest: all tests succeeded
+$ pgtblcheck
+usertrap(): unexpected scause 0xf pid=69
+            sepc=0x40a stval=0x3fffffd000
+kernel mappings: 95 superpage PTEs, 579 ordinary leaf PTEs
+pgtblcheck: all checks passed
+$ forktest
+fork test
+fork test OK
+$ qemu-system-riscv64: terminating on signal 15 from pid 635 (make)
